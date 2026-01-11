@@ -3,8 +3,8 @@ import { HeroGeometric } from "./ui/shape-landing-hero"
 
 function Hero() {
     return <HeroGeometric badge="Talksy"
-            title1 = "kuch hasi"
-            title2 = "kuch majak" />
+            title1 = "Kuch hasi"
+            title2 = "Kuch majak" />
 }
 
 export { Hero }
