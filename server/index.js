@@ -3,15 +3,6 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-app.get("/api/hello", (req, res) => {
-  res.json({ message: "Welcome to Talksy 🚀" });
-});
-
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI ;
 
@@ -22,40 +13,42 @@ const client = new MongoClient(MONGODB_URI, {
     deprecationErrors: true,
   }
 });
-
 let dbConnected = false;
 
 app.get("/api/db-status", (req, res) => {
   res.json({ connected: dbConnected });
 });
 
-async function start() {
-  if (!MONGODB_URI) {
-    console.error("MONGODB_URI is not set. Set it in your .env file.");
-    process.exit(1);
-  }
 
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.get("/api/hello", (req, res) => {
+  res.json({ message: "Welcome to Talksy 🚀" });
+});
+
+const User = require("./models/user");
+
+
+// GET all users
+app.get("/user", async (req, res) => {
   try {
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
-    dbConnected = true;
-    console.log("Connected to MongoDB");
-
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`Talksy backend running on port ${PORT}`);
-    });
+    const users = await User.find();   // ✅ fetch all users
+    res.json(users);
   } catch (err) {
-    dbConnected = false;
-    console.error("Failed to connect to MongoDB:", err);
-    process.exit(1);
+    res.status(500).json({ error: err.message });
   }
-}
+});
 
-start();
-
-process.on('SIGINT', async () => {
-  console.log('Shutting down server...');
-  try { await client.close(); } catch (e) {}
-  process.exit(0);
+// POST create user
+app.post("/user", async (req, res) => {
+  try {
+    const user = await User.create(req.body); // ✅ insert user
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
