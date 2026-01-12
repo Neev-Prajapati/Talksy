@@ -2,7 +2,8 @@
 import { motion } from "framer-motion";
 import { Circle } from "lucide-react";
 import { cn } from "../../lib/utils";
-import CoolButton from "../button";
+import CoolButton from "../coolbutton";
+import { Link } from "react-router-dom";
 
 
 function ElegantShape({
@@ -157,7 +158,7 @@ function HeroGeometric({
                     </motion.div>
 
                     <motion.div custom={2} variants={fadeUpVariants} initial="hidden" animate="visible">
-                        <CoolButton/>
+                       <Link to="/login"> <CoolButton/></Link>
                     </motion.div>
                 </div>
             </div>

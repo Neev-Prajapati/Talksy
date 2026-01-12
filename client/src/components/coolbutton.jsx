@@ -1,4 +1,4 @@
-import { LiquidButton } from "../components/liquid-glass-button";
+import { LiquidButton } from "./liquid-glass-button";
 
 export default function CoolButton() {
   return (
