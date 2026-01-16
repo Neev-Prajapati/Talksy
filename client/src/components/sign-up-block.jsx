@@ -14,6 +14,7 @@ import { Checkbox } from "./checkbox";
 import { useState } from "react";
 import { Mail, Lock, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 
 const SignUpBlock = () => {
@@ -48,20 +49,20 @@ const validateForm = () => {
     newErrors.email = "Please enter a valid email address";
   }
 
-  if (!formData.password) {
-    newErrors.password = "Password is required";
-  } else if (formData.password.length < 8) {
-    newErrors.password = "Password must be at least 8 characters";
-  } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*d)/.test(formData.password)) {
-    newErrors.password =
-      "Password must contain uppercase, lowercase, and number";
-  }
+  // if (!formData.password) {
+  //   newErrors.password = "Password is required";
+  // } else if (formData.password.length < 8) {
+  //   newErrors.password = "Password must be at least 8 characters";
+  // } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*d)/.test(formData.password)) {
+  //   newErrors.password =
+  //     "Password must contain uppercase, lowercase, and number";
+  // }
 
-  if (!formData.confirmPassword) {
-    newErrors.confirmPassword = "Please confirm your password";
-  } else if (formData.password !== formData.confirmPassword) {
-    newErrors.confirmPassword = "Passwords don't match";
-  }
+  // if (!formData.confirmPassword) {
+  //   newErrors.confirmPassword = "Please confirm your password";
+  // } else if (formData.password !== formData.confirmPassword) {
+  //   newErrors.confirmPassword = "Passwords don't match";
+  // }
 
   if (!formData.acceptTerms) {
     newErrors.acceptTerms = "You must accept the terms and conditions";
@@ -91,6 +92,7 @@ const handleInputChange = (
 const handleSubmit = async (e) => {
   e.preventDefault();
 
+  // 1️⃣ Frontend validation
   if (!validateForm()) {
     return;
   }
@@ -99,8 +101,18 @@ const handleSubmit = async (e) => {
   setErrors({});
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // 2️⃣ REAL API CALL TO BACKEND
+    const res = await axios.post("/api/users/signup", {
+      firstname: formData.firstName, // 🔑 matches MongoDB schema
+      email: formData.email,
+      password: formData.password,
+    });
+
+    // 3️⃣ Success response
+    console.log(res.data.message);
     setIsSuccess(true);
+
+    // 4️⃣ Reset form
     setFormData({
       firstName: "",
       lastName: "",
@@ -109,9 +121,13 @@ const handleSubmit = async (e) => {
       confirmPassword: "",
       acceptTerms: false,
     });
+
   } catch (error) {
+    // 5️⃣ Backend error handling
     setErrors({
-      general: "An unexpected error occurred. Please try again.",
+      general:
+        error.response?.data?.message ||
+        "Signup failed. Please try again.",
     });
   } finally {
     setIsLoading(false);

@@ -1,48 +1,39 @@
 const express = require("express");
+const User = require("../models/User");
+
 const router = express.Router();
-const User = require("../models/user");
 
-/* SIGNUP */
+// SIGNUP
 router.post("/signup", async (req, res) => {
-  const { username, password } = req.body;
+  try {
+    // ✅ 1. Extract firstname also
+    const { firstname, email, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ message: "All fields required" });
+    // ✅ 2. Validation
+    if (!firstname || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // ✅ 3. Check existing email
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
+    // ✅ 4. Save user
+    const newUser = new User({
+      firstname,
+      email,
+      password,
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ message: "Signup successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-
-  const existingUser = await User.findOne({ username });
-  if (existingUser) {
-    return res.status(409).json({ message: "User already exists" });
-  }
-
-  await User.create({ username, password });
-
-  res.status(201).json({ message: "User created successfully" });
 });
-
-/* LOGIN */
-router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-
-  const user = await User.findOne({ username, password });
-
-  if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  res.json({ message: "Login successful" });
-});
-
-// router.get("/", (req, res) => {
-//   res.send("User route working");
-// });
-
-// router.get("/signup", (req, res) => {
-//   res.send("Signup working");
-// });
-
-// router.get("/login", (req, res) => {
-//   res.send("Login working");
-// });
 
 module.exports = router;
