@@ -4,6 +4,8 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { Link } from "react-router-dom"
+import axios from "axios";
+
 
 const colors = ["#facc15", "#22c55e", "#3b82f6", "#f472b6", "#f97316"]
 
@@ -13,24 +15,38 @@ export default function GamifiedLoginCard() {
   const [success, setSuccess] = React.useState(false)
   const [particles, setParticles] = React.useState([])
 
-  const handleLogin = () => {
-    // Only allow login if both fields have input
-    if (!email || !password) return
+const handleLogin = async () => {
+  if (!email || !password) return;
 
-    // Trigger confetti
+  try {
+    // 🔹 Call backend login API
+    const res = await axios.post("/api/users/login", {
+      email,
+      password,
+    });
+
+    console.log(res.data.message); // "Login successful"
+
+    // 🔹 Trigger confetti ONLY on success
     const newParticles = Array.from({ length: 30 }).map((_, i) => ({
       id: Date.now() + i,
       x: 0,
       y: 0,
       rotate: Math.random() * 360,
       color: colors[Math.floor(Math.random() * colors.length)],
-    }))
-    setParticles(newParticles)
-    setSuccess(true)
+    }));
 
-    // Reset confetti after 1s
-    setTimeout(() => setParticles([]), 1000)
+    setParticles(newParticles);
+    setSuccess(true);
+
+    // clear confetti after 1s
+    setTimeout(() => setParticles([]), 1000);
+
+  } catch (err) {
+    alert(err.response?.data?.message || "Login failed");
   }
+};
+
 
   return (
     <div
