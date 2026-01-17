@@ -1,19 +1,21 @@
-import * as React from "react"
+import {useState} from "react"
 import { Button } from "./ui/loginbutton"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
+import { Input } from "./ui/input1"
+import { Label } from "./ui/label1"
 import { motion, AnimatePresence } from "framer-motion"
 import { Link } from "react-router-dom"
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 
 const colors = ["#facc15", "#22c55e", "#3b82f6", "#f472b6", "#f97316"]
 
 export default function GamifiedLoginCard() {
-  const [email, setEmail] = React.useState("")
-  const [password, setPassword] = React.useState("")
-  const [success, setSuccess] = React.useState(false)
-  const [particles, setParticles] = React.useState([])
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [success, setSuccess] = useState(false)
+  const [particles, setParticles] = useState([])
 
 const handleLogin = async () => {
   if (!email || !password) return;
@@ -27,22 +29,19 @@ const handleLogin = async () => {
 
     console.log(res.data.message); // "Login successful"
 
-    // 🔹 Trigger confetti ONLY on success
-    const newParticles = Array.from({ length: 30 }).map((_, i) => ({
-      id: Date.now() + i,
-      x: 0,
-      y: 0,
-      rotate: Math.random() * 360,
-      color: colors[Math.floor(Math.random() * colors.length)],
-    }));
 
-    setParticles(newParticles);
     setSuccess(true);
+   const userRes = await axios.get(`/api/users/${res.data.user.id}`);
 
-    // clear confetti after 1s
-    setTimeout(() => setParticles([]), 1000);
+    navigate("/chats", {
+     state: {
+    user: userRes.data.user, // ✅ plain JSON only
+     },
+});
+
 
   } catch (err) {
+    console.log(err)
     alert(err.response?.data?.message || "Login failed");
   }
 };
