@@ -95,45 +95,42 @@ const handleInputChange = (
 const handleSubmit = async (e) => {
   e.preventDefault();
 
-  // 1️⃣ Frontend validation
-  if (!validateForm()) {
-    return;
-  }
+  if (!validateForm()) return;
 
   setIsLoading(true);
   setErrors({});
 
   try {
-    // 2️⃣ REAL API CALL TO BACKEND
     const res = await axios.post("/api/users/signup", {
-      firstname: formData.firstName, // 🔑 matches MongoDB schema
+      firstname: formData.firstName,
       email: formData.email,
       password: formData.password,
     });
 
-    // 3️⃣ Success response
-    console.log(res.data.message);
-    setIsSuccess(true);
+    // ✅ SAME AS LOGIN PAGE
+    const { token, user } = res.data;
 
-    // 4️⃣ Reset form
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      acceptTerms: false,
+    // store token
+    localStorage.setItem("token", token);
+
+    // navigate with user (contains _id)
+    navigate("/chats", {
+      state: {
+        user: {
+          _id: user._id,
+          firstname: user.firstname,
+          email: user.email,
+        },
+      },
     });
 
   } catch (error) {
-    // 5️⃣ Backend error handling
     setErrors({
       general:
         error.response?.data?.message ||
         "Signup failed. Please try again.",
     });
   } finally {
-    navigate("/chats");
     setIsLoading(false);
   }
 };
