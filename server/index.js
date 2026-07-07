@@ -30,6 +30,9 @@ mongoose
 const userRoutes = require("./routes/user");
 app.use("/api/users", userRoutes);
 
+const friendRoutes = require("./routes/friend");
+app.use("/api/friends", friendRoutes);
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

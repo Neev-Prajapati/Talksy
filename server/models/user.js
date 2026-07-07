@@ -15,7 +15,22 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true
-  }
+  },
+  friends: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }],
+  friendRequests: [{
+    from: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    status: {
+      type: String,
+      enum: ["pending"],
+      default: "pending"
+    }
+  }]
 });
 
 // Step 2: Create model
