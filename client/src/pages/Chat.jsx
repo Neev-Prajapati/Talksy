@@ -44,7 +44,7 @@ export default function Chats() {
           onLogout={handleLogout}
         />
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 ml-72 h-full">
           <ChatWindow selectedFriend={selectedFriend} />
         </div>
       </div>
