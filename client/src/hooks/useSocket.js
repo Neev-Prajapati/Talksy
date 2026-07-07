@@ -1,8 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "http://localhost:5000";
-
 export function useSocket(userId) {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -12,8 +10,8 @@ export function useSocket(userId) {
   useEffect(() => {
     if (!userId) return;
 
-    const socket = io(SOCKET_URL, {
-      transports: ["websocket", "polling"],
+    const socket = io("http://localhost:5000", {
+      transports: ["polling", "websocket"],
     });
 
     socketRef.current = socket;
