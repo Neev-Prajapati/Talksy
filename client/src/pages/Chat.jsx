@@ -1,22 +1,53 @@
 import React, { useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+import { SidebarProvider } from "@/components/sidebar"
 import { ChatWindow } from "@/components/chatwindow"
 import { CoolSidebar } from "@/components/coolsidebar"
 
-export default function Chats({ user }) {
+export default function Chats() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // Try location.state first, then fallback to localStorage
+  const getUserData = () => {
+    if (location.state?.user) return location.state.user
+    const saved = localStorage.getItem("user")
+    if (saved) return JSON.parse(saved)
+    return null
+  }
+
+  const user = getUserData()
+
+  // If no user data, redirect to login
+  React.useEffect(() => {
+    if (!user) {
+      navigate("/login")
+    }
+  }, [user, navigate])
+
   const [selectedFriend, setSelectedFriend] = useState(null)
 
-  return (
-    <div className="h-screen w-screen flex overflow-hidden">
-      {/* Sidebar keeps its own width */}
-      <CoolSidebar
-        user={user}
-        onSelectFriend={setSelectedFriend}
-      />
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    navigate("/login")
+  }
 
-      {/* Chat window fills remaining space */}
-      <div className="flex-1">
-        <ChatWindow selectedFriend={selectedFriend} />
+  if (!user) return null
+
+  return (
+    <SidebarProvider>
+      <div className="h-screen w-screen flex overflow-hidden">
+        <CoolSidebar
+          user={user}
+          onSelectFriend={setSelectedFriend}
+          onLogout={handleLogout}
+        />
+
+        <div className="flex-1 min-w-0">
+          <ChatWindow selectedFriend={selectedFriend} />
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }

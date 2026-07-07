@@ -1,4 +1,4 @@
-import {useState} from "react"
+import {useState, useEffect} from "react"
 import { Button } from "./ui/loginbutton"
 import { Input } from "./ui/input1"
 import { Label } from "./ui/label1"
@@ -17,6 +17,15 @@ export default function GamifiedLoginCard() {
   const [success, setSuccess] = useState(false)
   const [particles, setParticles] = useState([])
 
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    const savedUser = localStorage.getItem("user")
+    if (token && savedUser) {
+      navigate("/chats", { state: { user: JSON.parse(savedUser) } })
+    }
+  }, [navigate])
+
 const handleLogin = async () => {
   if (!email || !password) return;
 
@@ -29,15 +38,17 @@ const handleLogin = async () => {
 
     console.log(res.data.message); // "Login successful"
 
-
     setSuccess(true);
-   const userRes = await axios.get(`/api/users/${res.data.user.id}`);
+    const userRes = await axios.get(`/api/users/${res.data.user.id}`);
+    const userData = userRes.data.user;
+
+    // Save session to localStorage
+    localStorage.setItem("token", res.data.token || "session");
+    localStorage.setItem("user", JSON.stringify(userData));
 
     navigate("/chats", {
-     state: {
-    user: userRes.data.user, // ✅ plain JSON only
-     },
-});
+      state: { user: userData },
+    });
 
 
   } catch (err) {
@@ -110,7 +121,7 @@ const handleLogin = async () => {
         {!success && (
           <p className="text-center text-sm text-gray-500 dark:text-gray-300 mt-2">
             Don’t have an account?{" "}
-            <Link to="/signup"><a href="#" className="text-purple-500 hover:underline">Sign up</a></Link>
+            <Link to="/signup" className="text-purple-500 hover:underline">Sign up</Link>
           </p>
         )}
       </motion.div>

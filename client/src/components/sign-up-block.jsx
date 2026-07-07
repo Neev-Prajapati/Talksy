@@ -11,7 +11,7 @@ CardFooter,
 CardTitle,
 } from "./card";
 import { Checkbox } from "./checkbox";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Lock, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -21,6 +21,15 @@ import { useNavigate } from "react-router-dom";
 
 const SignUpBlock = () => {
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    const savedUser = localStorage.getItem("user")
+    if (token && savedUser) {
+      navigate("/chats", { state: { user: JSON.parse(savedUser) } })
+    }
+  }, [navigate])
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -110,8 +119,13 @@ const handleSubmit = async (e) => {
     // ✅ SAME AS LOGIN PAGE
     const { token, user } = res.data;
 
-    // store token
+    // store token and user
     localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify({
+      _id: user._id,
+      firstname: user.firstname,
+      email: user.email,
+    }));
 
     // navigate with user (contains _id)
     navigate("/chats", {
@@ -277,7 +291,6 @@ return (
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link to="/login"
-              href="#"
               className="text-foreground decoration-0 no-underline font-normal">
               Sign In
             </Link>
