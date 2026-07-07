@@ -1,29 +1,76 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 
-export function ChatWindow({ selectedFriend }) {
+export function ChatWindow({ selectedFriend, currentUser, socket }) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const currentUserId = currentUser?._id;
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Reset messages when switching friends
+  // Fetch chat history when selecting a friend
   useEffect(() => {
-    setMessages([]);
-  }, [selectedFriend]);
+    if (!selectedFriend || !currentUserId) {
+      setMessages([]);
+      return;
+    }
+
+    const fetchHistory = async () => {
+      setLoading(true);
+      try {
+        const res = await axios.get(`/api/chat/${currentUserId}/${selectedFriend._id}`);
+        setMessages(res.data.messages || []);
+      } catch (err) {
+        console.error("Failed to fetch chat history:", err);
+        setMessages([]);
+      }
+      setLoading(false);
+    };
+
+    fetchHistory();
+  }, [selectedFriend, currentUserId]);
+
+  // Listen for real-time messages
+  const handleIncomingMessage = useCallback((data) => {
+    if (!selectedFriend) return;
+
+    const isMySentMessage = data.senderId === currentUserId && data.receiverId === selectedFriend._id;
+    const isIncomingFromFriend = data.senderId === selectedFriend._id && data.receiverId === currentUserId;
+
+    if (isMySentMessage || isIncomingFromFriend) {
+      const newMsg = {
+        _id: data._id,
+        text: data.text,
+        sender: data.senderId === currentUserId ? "me" : "friend",
+        timestamp: data.timestamp,
+      };
+
+      setMessages((prev) => {
+        // Avoid duplicates
+        if (prev.some((m) => m._id === newMsg._id)) return prev;
+        return [...prev, newMsg];
+      });
+    }
+  }, [selectedFriend, currentUserId]);
+
+  // Register the message handler with the socket
+  useEffect(() => {
+    if (socket?.onMessage) {
+      socket.onMessage(handleIncomingMessage);
+    }
+  }, [socket, handleIncomingMessage]);
 
   const handleSend = () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !selectedFriend || !socket) return;
 
-    setMessages((prev) => [
-      ...prev,
-      { _id: Date.now().toString(), text: message, sender: "me", timestamp: new Date() },
-    ]);
+    socket.sendMessage(selectedFriend._id, message.trim());
     setMessage("");
   };
 
@@ -74,16 +121,23 @@ export function ChatWindow({ selectedFriend }) {
             <h2 className="text-base font-semibold text-foreground">
               {selectedFriend.name}
             </h2>
-            <p className="text-xs text-emerald-500 font-medium">
-              {selectedFriend.online ? "Online" : "Offline"}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${socket?.isConnected ? "bg-emerald-500" : "bg-gray-400"}`} />
+              <p className={`text-xs font-medium ${socket?.isConnected ? "text-emerald-500" : "text-muted-foreground"}`}>
+                {socket?.isConnected ? "Connected" : "Connecting..."}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ===== Messages ===== */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
-        {messages.length === 0 ? (
+        {loading ? (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">Loading messages...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <p className="text-sm text-muted-foreground">
               Send a message to start the conversation 💬

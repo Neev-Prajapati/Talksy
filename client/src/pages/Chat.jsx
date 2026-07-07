@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { SidebarProvider } from "@/components/sidebar"
 import { ChatWindow } from "@/components/chatwindow"
 import { CoolSidebar } from "@/components/coolsidebar"
+import { useSocket } from "@/hooks/useSocket"
 
 export default function Chats() {
   const location = useLocation()
@@ -27,6 +28,9 @@ export default function Chats() {
 
   const [selectedFriend, setSelectedFriend] = useState(null)
 
+  // Initialize socket connection
+  const socket = useSocket(user?._id)
+
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("user")
@@ -45,7 +49,11 @@ export default function Chats() {
         />
 
         <div className="flex-1 min-w-0 ml-72 h-full">
-          <ChatWindow selectedFriend={selectedFriend} />
+          <ChatWindow
+            selectedFriend={selectedFriend}
+            currentUser={user}
+            socket={socket}
+          />
         </div>
       </div>
     </SidebarProvider>
