@@ -16,6 +16,7 @@ import { Mail, Lock, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 
 
 
@@ -55,26 +56,26 @@ const validateForm = () => {
     newErrors.lastName = "Last name is required";
   }
   
-  // if (!formData.email.trim()) {
-  //   newErrors.email = "Email is required";
-  // } else if (!/^[^s@]+@[^s@]+.[^s@]+$/.test(formData.email)) {
-  //   newErrors.email = "Please enter a valid email address";
-  // }
+  if (!formData.email.trim()) {
+    newErrors.email = "Email is required";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    newErrors.email = "Please enter a valid email address";
+  }
 
-  // if (!formData.password) {
-  //   newErrors.password = "Password is required";
-  // } else if (formData.password.length < 8) {
-  //   newErrors.password = "Password must be at least 8 characters";
-  // } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*d)/.test(formData.password)) {
-  //   newErrors.password =
-  //     "Password must contain uppercase, lowercase, and number";
-  // }
+  if (!formData.password) {
+    newErrors.password = "Password is required";
+  } else if (formData.password.length < 8) {
+    newErrors.password = "Password must be at least 8 characters";
+  } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+    newErrors.password =
+      "Password must contain uppercase, lowercase, and number";
+  }
 
-  // if (!formData.confirmPassword) {
-  //   newErrors.confirmPassword = "Please confirm your password";
-  // } else if (formData.password !== formData.confirmPassword) {
-  //   newErrors.confirmPassword = "Passwords don't match";
-  // }
+  if (!formData.confirmPassword) {
+    newErrors.confirmPassword = "Please confirm your password";
+  } else if (formData.password !== formData.confirmPassword) {
+    newErrors.confirmPassword = "Passwords don't match";
+  }
 
   if (!formData.acceptTerms) {
     newErrors.acceptTerms = "You must accept the terms and conditions";
@@ -146,6 +147,37 @@ const handleSubmit = async (e) => {
     });
   } finally {
     setIsLoading(false);
+  }
+};
+
+const handleGoogleSuccess = async (credentialResponse) => {
+  try {
+    const res = await axios.post("/api/users/google", {
+      credential: credentialResponse.credential,
+    });
+
+    const { token, user: userData } = res.data;
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify({
+      _id: userData._id,
+      firstname: userData.firstname,
+      email: userData.email,
+    }));
+
+    navigate("/chats", {
+      state: {
+        user: {
+          _id: userData._id,
+          firstname: userData.firstname,
+          email: userData.email,
+        },
+      },
+    });
+  } catch (err) {
+    setErrors({
+      general: err.response?.data?.message || "Google sign-up failed. Please try again.",
+    });
   }
 };
 
@@ -286,6 +318,26 @@ return (
         <Button type="submit" className="w-full" loading={isLoading} disabled={isLoading}>
           {isLoading ? "Creating Account..." : "Create Account"}
         </Button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 w-full">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
+        {/* Google Sign-In */}
+        <div className="flex justify-center w-full">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setErrors({ general: "Google Sign-In failed" })}
+            theme="outline"
+            size="large"
+            width="100%"
+            text="signup_with"
+            shape="pill"
+          />
+        </div>
 
         <div className="text-center">
           <p className="text-sm text-muted-foreground">

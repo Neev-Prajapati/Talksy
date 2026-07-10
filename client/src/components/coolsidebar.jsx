@@ -11,16 +11,19 @@ import {
   SidebarHeader,
 } from "./sidebar"
 
-import { UserPlus, LogOut, User, MessageCircle, Search, Check, X } from "lucide-react"
+import { UserPlus, LogOut, User, MessageCircle, Search, Check, X, Users, Plus } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { AddFriendDialog } from "./AddFriendDialog"
+import { CreateGroupDialog } from "./CreateGroupDialog"
 import axios from "axios"
 
-export function CoolSidebar({ user, onSelectFriend, onLogout }) {
+export function CoolSidebar({ user, onSelectFriend, onLogout, socket }) {
   const [friends, setFriends] = useState([])
   const [requests, setRequests] = useState([])
+  const [groups, setGroups] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [addFriendOpen, setAddFriendOpen] = useState(false)
+  const [createGroupOpen, setCreateGroupOpen] = useState(false)
 
   const userId = user?._id
 
@@ -46,24 +49,50 @@ export function CoolSidebar({ user, onSelectFriend, onLogout }) {
     }
   }, [userId])
 
+  // Fetch groups
+  const fetchGroups = useCallback(async () => {
+    if (!userId) return
+    try {
+      const res = await axios.get(`/api/groups/user/${userId}`)
+      setGroups(res.data.groups || [])
+    } catch (err) {
+      console.error("Failed to fetch groups:", err)
+    }
+  }, [userId])
+
   // Load on mount
   useEffect(() => {
     fetchFriends()
     fetchRequests()
-  }, [fetchFriends, fetchRequests])
+    fetchGroups()
+  }, [fetchFriends, fetchRequests, fetchGroups])
 
   // Poll for new requests every 15 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchRequests()
       fetchFriends()
+      fetchGroups()
     }, 15000)
     return () => clearInterval(interval)
-  }, [fetchRequests, fetchFriends])
+  }, [fetchRequests, fetchFriends, fetchGroups])
 
   const handleSelectFriend = (friend) => {
     setSelectedId(friend._id)
-    onSelectFriend?.(friend)
+    onSelectFriend?.({ ...friend, isGroup: false })
+  }
+
+  const handleSelectGroup = (group) => {
+    setSelectedId(group._id)
+    onSelectFriend?.({
+      _id: group._id,
+      name: group.name,
+      avatar: group.avatar,
+      description: group.description,
+      members: group.members,
+      memberCount: group.memberCount,
+      isGroup: true,
+    })
   }
 
   const handleAccept = async (requesterId) => {
@@ -91,6 +120,12 @@ export function CoolSidebar({ user, onSelectFriend, onLogout }) {
     // Refresh requests in case one was auto-accepted
     fetchRequests()
     fetchFriends()
+  }
+
+  const handleGroupCreated = (group) => {
+    fetchGroups()
+    // Auto-join the socket room for the new group
+    socket?.joinGroup?.(group._id)
   }
 
   return (
@@ -162,6 +197,59 @@ export function CoolSidebar({ user, onSelectFriend, onLogout }) {
             </SidebarGroupContent>
           </SidebarGroup>
 
+          {/* ===== Groups List ===== */}
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground/70 font-semibold">
+              Groups {groups.length > 0 && `(${groups.length})`}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {groups.length === 0 ? (
+                  <p className="px-4 py-4 text-sm text-muted-foreground text-center">
+                    No groups yet. Create one to start!
+                  </p>
+                ) : (
+                  groups.map((group) => (
+                    <SidebarMenuItem key={group._id}>
+                      <SidebarMenuButton
+                        onClick={() => handleSelectGroup(group)}
+                        isActive={selectedId === group._id}
+                      >
+                        <span className="relative flex items-center justify-center">
+                          {group.avatar ? (
+                            <img
+                              src={group.avatar}
+                              alt={group.name}
+                              className="h-8 w-8 rounded-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none"
+                                e.target.nextSibling.style.display = "flex"
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500"
+                            style={{ display: group.avatar ? "none" : "flex" }}
+                          >
+                            <span className="text-xs font-bold text-white">
+                              {group.name?.charAt(0)?.toUpperCase()}
+                            </span>
+                          </div>
+                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate font-medium text-sm">{group.name}</span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {group.memberCount} member{group.memberCount !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
           {/* ===== Friend Requests ===== */}
           <SidebarGroup>
             <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground/70 font-semibold">
@@ -210,7 +298,7 @@ export function CoolSidebar({ user, onSelectFriend, onLogout }) {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* ===== Add Friend ===== */}
+          {/* ===== Action Buttons ===== */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -221,6 +309,15 @@ export function CoolSidebar({ user, onSelectFriend, onLogout }) {
                   >
                     <UserPlus className="h-4 w-4" />
                     <span className="font-medium text-sm">Add Friend</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="text-emerald-500 hover:text-emerald-400"
+                    onClick={() => setCreateGroupOpen(true)}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span className="font-medium text-sm">Create Group</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -262,6 +359,15 @@ export function CoolSidebar({ user, onSelectFriend, onLogout }) {
         isOpen={addFriendOpen}
         onClose={handleAddFriendClose}
         userId={userId}
+      />
+
+      {/* Create Group Dialog */}
+      <CreateGroupDialog
+        isOpen={createGroupOpen}
+        onClose={() => setCreateGroupOpen(false)}
+        userId={userId}
+        friends={friends}
+        onGroupCreated={handleGroupCreated}
       />
     </>
   )

@@ -5,6 +5,7 @@ export function useSocket(userId) {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const messageHandlerRef = useRef(null);
+  const groupMessageHandlerRef = useRef(null);
 
   // Connect on mount
   useEffect(() => {
@@ -25,17 +26,24 @@ export function useSocket(userId) {
       setIsConnected(false);
     });
 
-    // Listen for incoming messages
+    // Listen for incoming direct messages
     socket.on("receive_message", (data) => {
       if (messageHandlerRef.current) {
         messageHandlerRef.current(data);
       }
     });
 
-    // Listen for sent message confirmations
+    // Listen for sent message confirmations (direct)
     socket.on("message_sent", (data) => {
       if (messageHandlerRef.current) {
         messageHandlerRef.current(data);
+      }
+    });
+
+    // Listen for incoming group messages
+    socket.on("receive_group_message", (data) => {
+      if (groupMessageHandlerRef.current) {
+        groupMessageHandlerRef.current(data);
       }
     });
 
@@ -45,21 +53,42 @@ export function useSocket(userId) {
     };
   }, [userId]);
 
-  // Register a callback for incoming messages
+  // Register a callback for incoming direct messages
   const onMessage = useCallback((handler) => {
     messageHandlerRef.current = handler;
   }, []);
 
-  // Send a message
-  const sendMessage = useCallback((receiverId, text) => {
+  // Register a callback for incoming group messages
+  const onGroupMessage = useCallback((handler) => {
+    groupMessageHandlerRef.current = handler;
+  }, []);
+
+  // Send a message (direct or group)
+  const sendMessage = useCallback((targetId, text, isGroup = false, senderName = "") => {
     if (socketRef.current?.connected) {
-      socketRef.current.emit("send_message", {
-        senderId: userId,
-        receiverId,
-        text,
-      });
+      if (isGroup) {
+        socketRef.current.emit("send_message", {
+          senderId: userId,
+          groupId: targetId,
+          text,
+          senderName,
+        });
+      } else {
+        socketRef.current.emit("send_message", {
+          senderId: userId,
+          receiverId: targetId,
+          text,
+        });
+      }
     }
   }, [userId]);
 
-  return { sendMessage, onMessage, isConnected };
+  // Join a specific group room (e.g. after creating or being added to a group)
+  const joinGroup = useCallback((groupId) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("join_group", groupId);
+    }
+  }, []);
+
+  return { sendMessage, onMessage, onGroupMessage, joinGroup, isConnected };
 }

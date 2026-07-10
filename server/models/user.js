@@ -14,7 +14,21 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true
+    required: false // Optional — Google users won't have a password
+  },
+  googleId: {
+    type: String,
+    required: false,
+    sparse: true // Allow null but enforce uniqueness when present
+  },
+  avatar: {
+    type: String, // Google profile picture URL
+    default: ""
+  },
+  authProvider: {
+    type: String,
+    enum: ["local", "google"],
+    default: "local"
   },
   friends: [{
     type: mongoose.Schema.Types.ObjectId,

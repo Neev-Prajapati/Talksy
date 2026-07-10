@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Link } from "react-router-dom"
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 
 
 const colors = ["#facc15", "#22c55e", "#3b82f6", "#f472b6", "#f97316"]
@@ -30,30 +31,66 @@ const handleLogin = async () => {
   if (!email || !password) return;
 
   try {
-    // 🔹 Call backend login API
     const res = await axios.post("/api/users/login", {
       email,
       password,
     });
 
-    console.log(res.data.message); // "Login successful"
+    const { token, user: userData } = res.data;
 
     setSuccess(true);
-    const userRes = await axios.get(`/api/users/${res.data.user.id}`);
-    const userData = userRes.data.user;
 
     // Save session to localStorage
-    localStorage.setItem("token", res.data.token || "session");
-    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify({
+      _id: userData._id,
+      firstname: userData.firstname,
+      email: userData.email,
+    }));
 
     navigate("/chats", {
-      state: { user: userData },
+      state: {
+        user: {
+          _id: userData._id,
+          firstname: userData.firstname,
+          email: userData.email,
+        },
+      },
     });
 
-
   } catch (err) {
-    console.log(err)
     alert(err.response?.data?.message || "Login failed");
+  }
+};
+
+const handleGoogleSuccess = async (credentialResponse) => {
+  try {
+    const res = await axios.post("/api/users/google", {
+      credential: credentialResponse.credential,
+    });
+
+    const { token, user: userData } = res.data;
+
+    setSuccess(true);
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify({
+      _id: userData._id,
+      firstname: userData.firstname,
+      email: userData.email,
+    }));
+
+    navigate("/chats", {
+      state: {
+        user: {
+          _id: userData._id,
+          firstname: userData.firstname,
+          email: userData.email,
+        },
+      },
+    });
+  } catch (err) {
+    alert(err.response?.data?.message || "Google login failed");
   }
 };
 
@@ -118,9 +155,33 @@ const handleLogin = async () => {
           {success ? "Logged In!" : "Login"}
         </Button>
 
+        {/* Divider */}
+        {!success && (
+          <div className="flex items-center gap-3 mt-2">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-600" />
+            <span className="text-xs text-gray-400 dark:bg-gray-800 dark:text-gray-500 uppercase tracking-wider">or</span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-600" />
+          </div>
+        )}
+
+        {/* Google Sign-In */}
+        {!success && (
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => alert("Google Sign-In failed")}
+              theme="outline"
+              size="large"
+              width="100%"
+              text="signin_with"
+              shape="pill"
+            />
+          </div>
+        )}
+
         {!success && (
           <p className="text-center text-sm text-gray-500 dark:text-gray-300 mt-2">
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <Link to="/signup" className="text-purple-500 hover:underline">Sign up</Link>
           </p>
         )}
